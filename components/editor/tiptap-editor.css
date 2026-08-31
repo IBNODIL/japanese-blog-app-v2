@@ -1,0 +1,148 @@
+/* TipTap Editor Styles */
+
+.ProseMirror {
+  outline: none;
+}
+
+/* Image Wrapper and Controls */
+.image-wrapper {
+  display: inline-block;
+  position: relative;
+  max-width: 100%;
+  margin: 1rem 0;
+  overflow: visible;
+  padding-right: 20px;
+  padding-bottom: 20px;
+}
+
+.image-wrapper:hover .image-resize-handle,
+.image-wrapper:hover .image-delete-btn {
+  opacity: 1;
+}
+
+/* ProseMirror Images - with resize handle via ::after */
+.ProseMirror img {
+  border-radius: 0.375rem;
+  max-width: 100%;
+  height: auto;
+  position: relative;
+  display: inline-block;
+}
+
+/* Resize handle created with ::after pseudo-element */
+.ProseMirror img[data-resizable="true"]::after {
+  content: "";
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, rgb(59, 130, 246) 50%, rgba(59, 130, 246, 0) 50%);
+  cursor: nwse-resize;
+  border: 2px solid rgb(59, 130, 246);
+  opacity: 1;
+  bottom: -10px;
+  right: -10px;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+}
+
+.ProseMirror img[data-resizable="true"]:hover::after {
+  background: linear-gradient(135deg, rgb(37, 99, 235) 50%, rgba(37, 99, 235, 0) 50%);
+  border-color: rgb(37, 99, 235);
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.8);
+}
+
+/* Image Alignment */
+.ProseMirror img[data-align="left"] {
+  float: left;
+  margin-right: 2rem;
+  margin-bottom: 1rem;
+  width: 50% !important;
+  max-width: 50% !important;
+  height: auto !important;
+}
+
+.ProseMirror img[data-align="right"] {
+  float: right;
+  margin-left: 2rem;
+  margin-bottom: 1rem;
+  width: 50% !important;
+  max-width: 50% !important;
+  height: auto !important;
+}
+
+.ProseMirror img[data-align="center"] {
+  display: block;
+  float: none !important;
+  clear: both;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Image Resize Handle */
+.image-resize-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #3b82f6 50%, transparent 50%);
+  cursor: nwse-resize;
+  border: 2px solid #60a5fa;
+  border-radius: 2px;
+  opacity: 1;
+  transition: all 0.2s ease;
+  bottom: -6px;
+  right: -6px;
+  z-index: 9999;
+  touch-action: none;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.8), inset 0 0 4px rgba(255,255,255,0.4);
+}
+
+.image-resize-handle:hover {
+  opacity: 1 !important;
+  background: linear-gradient(135deg, #2563eb 50%, transparent 50%);
+  border-color: #1d4ed8;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 1), inset 0 0 4px rgba(255,255,255,0.6);
+  width: 24px;
+  height: 24px;
+  bottom: -8px;
+  right: -8px;
+}
+
+/* Image Delete Button - HIDDEN (delete via keyboard Delete key) */
+.image-delete-btn {
+  display: none;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .image-resize-handle {
+    border-color: #3b82f6;
+  }
+
+  .image-resize-handle:hover {
+    border-color: #2563eb;
+  }
+
+  .image-delete-btn {
+    background: #dc2626;
+    border-color: #991b1b;
+  }
+
+  .image-delete-btn:hover {
+    background: #b91c1c;
+  }
+}
+
+/* Responsive Images */
+@media (max-width: 640px) {
+  .ProseMirror img[data-align="left"],
+  .ProseMirror img[data-align="right"] {
+    float: none;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    max-width: 100%;
+  }
+}

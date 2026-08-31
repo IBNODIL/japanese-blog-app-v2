@@ -1,0 +1,36 @@
+/* Infinite horizontal scroll animation */
+@keyframes infiniteScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Animation class - use on the carousel track container */
+.carousel-animate {
+  animation: infiniteScroll 30s linear infinite;
+}
+
+/* Pause animation on hover */
+.carousel-animate:hover {
+  animation-play-state: paused;
+}
+
+/* For slower/faster speeds, override the duration */
+.carousel-animate-slow {
+  animation: infiniteScroll 40s linear infinite;
+}
+
+.carousel-animate-slow:hover {
+  animation-play-state: paused;
+}
+
+.carousel-animate-fast {
+  animation: infiniteScroll 20s linear infinite;
+}
+
+.carousel-animate-fast:hover {
+  animation-play-state: paused;
+}

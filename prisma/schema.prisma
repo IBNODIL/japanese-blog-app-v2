@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+}
+
+enum Language {
+  UZ
+  EN
+  JA
+  RU
+}
+
+enum TranslationStatus {
+  ORIGINAL
+  AUTO_TRANSLATED
+  MANUAL_TRANSLATED
+  PENDING
+  FAILED
+}
+
+enum PostStatus {
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          Role      @default(TEACHER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+  bookmarks     Bookmark[]
+  notifications Notification[]
+  postHistory   PostHistory[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Post {
+  id               String   @id @default(cuid())
+  title            String
+  content          Json
+  slug             String   @unique
+  coverImage       String?
+  authorId         String
+  published        Boolean  @default(false)
+  hidden           Boolean  @default(false)
+  language         String   @default("uz")
+  readingTime      Int      @default(0)
+  featured         Boolean  @default(false)
+  status           PostStatus @default(PROCESSING)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  author        User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  translations  PostTranslation[]
+  comments      Comment[]
+  likes         Like[]
+  bookmarks     Bookmark[]
+  history       PostHistory[]
+  jobs          TranslationJob[]
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([published])
+}
+
+model PostTranslation {
+  id                String            @id @default(cuid())
+  postId            String
+  language          String
+  title             String
+  content           Json
+  slug              String
+  coverImage        String?
+  isOriginal        Boolean           @default(false)
+  translationStatus TranslationStatus @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  post Post                 @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tags PostTranslationTag[]
+
+  @@unique([postId, language])
+  @@unique([slug])
+  @@index([postId])
+  @@index([language])
+}
+
+model Tag {
+  id    String                @id @default(cuid())
+  name  String                @unique
+  slug  String                @unique
+  posts PostTranslationTag[]
+}
+
+model PostTranslationTag {
+  postTranslationId String
+  tagId             String
+
+  postTranslation PostTranslation @relation(fields: [postTranslationId], references: [id], onDelete: Cascade)
+  tag             Tag             @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postTranslationId, tagId])
+  @@index([tagId])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  content       String
+  postId        String
+  authorId      String
+  parentId      String?
+  language      String   @default("uz")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  post          Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]           @relation("CommentReplies")
+  translations  CommentTranslation[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model CommentTranslation {
+  id        String   @id @default(cuid())
+  commentId String
+  language  String
+  content   String
+  createdAt DateTime @default(now())
+
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, language])
+  @@index([commentId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  postId    String?
+  commentId String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PostHistory {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  action    String
+  changes   String?
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model TranslationJob {
+  id        String   @id @default(cuid())
+  postId    String
+  status    JobStatus @default(PENDING)
+  retries   Int       @default(0)
+  error     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([postId])
+  @@index([createdAt])
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  image     String
+  text      String?
+  link      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
+
+model HomepageContent {
+  id        String   @id @default(cuid())
+  language  String   @unique
+  title     String
+  subtitle  String
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FooterLink {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  icon      String?  // Icon name from lucide-react
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+}
