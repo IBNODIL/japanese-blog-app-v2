@@ -2,13 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+import { getPublicPartners, CACHE_TAGS } from "@/lib/cache";
 
 // Get all partners
 export async function GET() {
   try {
-    const partners = await prisma.partner.findMany({
-      orderBy: { order: "asc" },
-    });
+    const partners = await getPublicPartners();
     return NextResponse.json(partners);
   } catch (error) {
     console.error("Failed to fetch partners:", error);
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidateTag(CACHE_TAGS.partners, "max");
     return NextResponse.json(partner, { status: 201 });
   } catch (error) {
     console.error("Failed to create partner:", error);

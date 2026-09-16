@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getPostBySlug } from "@/lib/cache";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,54 +21,20 @@ interface PostPageProps {
  * Resolve a post by slug, preferring a match against the locale-specific
  * PostTranslation.slug. Falls back to the legacy Post.slug for old links
  * created before slugs became per-language.
+ *
+ * The DB lookup itself is cached (see lib/cache.ts::getPostBySlug); the
+ * cross-locale redirect (a Next.js navigation side effect, not cacheable
+ * data) is handled here after reading the cached result.
  */
 async function resolvePostBySlug(slug: string, locale: string) {
-  // 1. Try matching a translation row with this exact slug (any language).
-  const translationMatch = await prisma.postTranslation.findUnique({
-    where: { slug },
-    include: {
-      tags: { include: { tag: true } },
-      post: {
-        include: {
-          author: { select: { id: true, name: true, image: true } },
-          _count: { select: { likes: true, comments: true, bookmarks: true } },
-        },
-      },
-    },
-  });
+  const result = await getPostBySlug(slug, locale);
+  if (!result) return null;
 
-  if (translationMatch) {
-    // If the slug belongs to a different language than the current URL
-    // locale, the canonical URL for this locale is that locale's own
-    // translation slug (if one exists) — redirect there.
-    if (translationMatch.language !== locale) {
-      const localeTranslation = await prisma.postTranslation.findUnique({
-        where: { postId_language: { postId: translationMatch.postId, language: locale } },
-        select: { slug: true },
-      });
-      if (localeTranslation && localeTranslation.slug !== slug) {
-        redirect(`/${locale}/post/${localeTranslation.slug}`);
-      }
-    }
-    return { post: translationMatch.post, translation: translationMatch };
+  if (result.redirectToSlug) {
+    redirect(`/${locale}/post/${result.redirectToSlug}`);
   }
 
-  // 2. Legacy fallback: old links used the global Post.slug directly.
-  const post = await prisma.post.findUnique({
-    where: { slug },
-    include: {
-      author: { select: { id: true, name: true, image: true } },
-      _count: { select: { likes: true, comments: true, bookmarks: true } },
-    },
-  });
-  if (!post) return null;
-
-  const translation = await prisma.postTranslation.findUnique({
-    where: { postId_language: { postId: post.id, language: locale } },
-    include: { tags: { include: { tag: true } } },
-  });
-
-  return { post, translation };
+  return { post: result.post, translation: result.translation };
 }
 
 export async function generateMetadata({

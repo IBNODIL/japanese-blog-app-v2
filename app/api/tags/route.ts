@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPublicTags } from "@/lib/cache";
 
 export async function GET() {
   try {
-    const tags = await prisma.tag.findMany({
-      select: {
-        name: true,
-        slug: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    const tags = await getPublicTags();
 
     return NextResponse.json({
       tags,

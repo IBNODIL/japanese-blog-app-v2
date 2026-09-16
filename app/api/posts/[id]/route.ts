@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { updatePostSchema } from "@/lib/validations";
 import { savePostTranslations } from "@/lib/translation/saveTranslations";
 import { getSessionUser, isAdmin, isSuperAdmin } from "@/lib/session";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 import slugify from "slugify";
 
 export async function GET(
@@ -148,6 +150,8 @@ export async function PATCH(
     },
   });
 
+  revalidateTag(CACHE_TAGS.posts, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
   return NextResponse.json(fullPost);
 }
 
@@ -186,5 +190,7 @@ export async function DELETE(
 
   await prisma.post.delete({ where: { id } });
 
+  revalidateTag(CACHE_TAGS.posts, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
   return NextResponse.json({ success: true });
 }

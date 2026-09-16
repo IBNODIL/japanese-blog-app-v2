@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, isSuperAdmin } from "@/lib/session";
 import { translateText } from "@/lib/translate";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 
 // Get all homepage content
 export async function GET() {
@@ -97,6 +99,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    revalidateTag(CACHE_TAGS.homepageContent, "max");
     return NextResponse.json(content);
   } catch (error) {
     console.error("Failed to update homepage content:", error);

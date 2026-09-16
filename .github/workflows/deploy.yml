@@ -1,0 +1,126 @@
+name: Build and Deploy Next.js
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Install and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma generate
+
+      - name: Build Next.js application
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          BETTER_AUTH_URL: ${{ secrets.BETTER_AUTH_URL }}
+        run: npm run build
+
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy project to DigitalOcean
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_PORT || 22 }}
+          source: "app,actions,components,hooks,i18n,lib,messages,prisma,public,server.js,package.json,package-lock.json,prisma.config.ts,next.config.ts,tsconfig.json,postcss.config.mjs,tailwind.config.ts,proxy.ts,eslint.config.mjs,.npmrc"
+          target: "/opt/nextjs-app"
+          overwrite: true
+
+      - name: Install and restart application
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Starting deployment"
+            echo "======================================"
+
+            cd /opt/nextjs-app
+
+            echo "Node version:"
+            node -v
+
+            echo "NPM version:"
+            npm -v
+
+            echo "--------------------------------------"
+            echo "Installing dependencies"
+            echo "--------------------------------------"
+
+            npm ci
+
+            echo "--------------------------------------"
+            echo "Generating Prisma Client"
+            echo "--------------------------------------"
+
+            npx prisma generate
+
+            echo "--------------------------------------"
+            echo "Running database migrations"
+            echo "--------------------------------------"
+
+            npx prisma migrate deploy
+
+            echo "--------------------------------------"
+            echo "Building Next.js"
+            echo "--------------------------------------"
+
+            npm run build
+
+            echo "--------------------------------------"
+            echo "Restarting Next.js service"
+            echo "--------------------------------------"
+
+            sudo systemctl restart nextjs
+
+            echo "--------------------------------------"
+            echo "Checking service"
+            echo "--------------------------------------"
+
+            sudo systemctl is-active --quiet nextjs
+
+            echo "======================================"
+            echo "Deployment completed successfully"
+            echo "======================================"

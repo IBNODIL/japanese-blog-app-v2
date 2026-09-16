@@ -7,6 +7,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { savePostTranslations } from "@/lib/translation/saveTranslations";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 
 type Language = "uz" | "en" | "ja" | "ru";
 
@@ -42,6 +44,10 @@ export async function translatePost(postId: string): Promise<void> {
       where: { id: postId },
       data: { status: "PUBLISHED", published: true },
     });
+    // The post is now publicly visible — bust the cached home feed/tags
+    // so it shows up without waiting for the TTL to expire.
+    revalidateTag(CACHE_TAGS.posts, "max");
+    revalidateTag(CACHE_TAGS.tags, "max");
     console.log(`✅ Post ${postId} → PUBLISHED`);
   } else {
     await prisma.post.update({

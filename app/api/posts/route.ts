@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, isAdmin } from "@/lib/session";
 import { createPostSchema } from "@/lib/validations";
 import { savePostTranslations } from "@/lib/translation/saveTranslations";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 import slugify from "slugify";
 
 export async function GET(request: NextRequest) {
@@ -180,5 +182,7 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  revalidateTag(CACHE_TAGS.posts, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
   return NextResponse.json(fullPost, { status: 201 });
 }

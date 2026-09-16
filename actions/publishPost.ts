@@ -12,6 +12,8 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser, isAdmin } from "@/lib/session";
 import { createPostSchema } from "@/lib/validations";
 import { addTranslationJob } from "@/lib/queue";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 import slugify from "slugify";
 
 interface PublishResult {
@@ -120,6 +122,10 @@ export async function publishPost(
       error: "Failed to queue translation. Post saved as draft.",
     };
   }
+
+  // Post/tag data changed (new tags may have been created too).
+  revalidateTag(CACHE_TAGS.posts, "max");
+  revalidateTag(CACHE_TAGS.tags, "max");
 
   return { success: true, postId: post.id, slug: finalSlug };
 }

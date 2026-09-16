@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getHomeFeedData, getHomepageContentByLocale } from "@/lib/cache";
 import { getTranslations } from "next-intl/server";
 import { PostCard } from "@/components/post/post-card";
 import { PostCarousel } from "@/components/post/post-carousel";
@@ -24,46 +24,8 @@ export default async function HomePage({
   const page = parseInt(pageStr || "1");
   const limit = 12;
 
-  const where: Record<string, unknown> = { published: true, hidden: false };
-  if (tag) {
-    where.translations = { some: { tags: { some: { tag: { slug: tag } } } } };
-  }
-
-  // Get posts with translation filtering
-  const [posts, total, featuredPosts, allTags] = await Promise.all([
-    prisma.post.findMany({
-      where,
-      include: {
-        author: { select: { id: true, name: true, image: true } },
-        translations: {
-          where: { language: locale },
-          select: { title: true, slug: true, coverImage: true, tags: { include: { tag: true } } },
-        },
-        _count: { select: { likes: true, comments: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit * 2, // Fetch more to account for filtering
-    }),
-    prisma.post.count({ where }),
-    prisma.post.findMany({
-        where: { published: true, hidden: false, featured: true },
-        include: {
-          author: { select: { id: true, name: true, image: true } },
-          translations: {
-            where: { language: locale },
-            select: { title: true, slug: true, coverImage: true, tags: { include: { tag: true } } },
-          },
-          _count: { select: { likes: true, comments: true } },
-        },
-        take: 3,
-      }),
-      prisma.tag.findMany({
-        include: { _count: { select: { posts: true } } },
-        orderBy: { posts: { _count: "desc" } },
-        take: 20,
-      }),
-    ]);
+  // Get posts with translation filtering (cached — see lib/cache.ts)
+  const { posts, total, featuredPosts, allTags } = await getHomeFeedData(locale, page, tag);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -77,10 +39,8 @@ export default async function HomePage({
     (post) => post.translations.length > 0 || post.language === locale
   );
 
-  // Fetch homepage content for the current locale
-  const homepageContent = await prisma.homepageContent.findUnique({
-    where: { language: locale },
-  });
+  // Fetch homepage content for the current locale (cached — see lib/cache.ts)
+  const homepageContent = await getHomepageContentByLocale(locale);
 
   // Use homepage content or fallback to translations
   const heroTranslations = {

@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,6 +51,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
 
+    revalidateTag(CACHE_TAGS.partners, "max");
     return NextResponse.json(partner);
   } catch (error) {
     console.error("Failed to update partner:", error);
@@ -106,6 +109,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       where: { id },
     });
 
+    revalidateTag(CACHE_TAGS.partners, "max");
     return NextResponse.json({ message: "Partner deleted successfully" });
   } catch (error) {
     console.error("Failed to delete partner:", error);
