@@ -1,5 +1,5 @@
 /**
- * Background translation worker — triggered by Vercel Cron (every 1 min).
+ * Background translation worker — triggered by system cron (every 1 min).
  *
  * GET /api/worker
  *
@@ -18,12 +18,13 @@ import { translatePost } from "@/lib/translator";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret in production to prevent unauthorized calls
+  if (!process.env.CRON_SECRET) {
+    console.error("CRON_SECRET is not configured; refusing worker request");
+    return NextResponse.json({ error: "Worker is not configured" }, { status: 503 });
+  }
+
   const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

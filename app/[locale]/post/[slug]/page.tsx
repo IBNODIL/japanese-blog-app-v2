@@ -55,7 +55,7 @@ export async function generateMetadata({
       title: translatedTitle,
       description: `${translatedTitle} by ${post.author.name}`,
       type: "article",
-      publishedTime: post.createdAt.toISOString(),
+      publishedTime: new Date(post.createdAt).toISOString(),
       authors: [post.author.name],
       ...(coverImage ? { images: [coverImage] } : {}),
     },

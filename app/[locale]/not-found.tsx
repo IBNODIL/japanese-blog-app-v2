@@ -51,7 +51,7 @@ export default function LocaleNotFound() {
             href="mailto:support@uzjta.uz"
             className="text-primary hover:underline text-sm"
           >
-            support@uzjta.uz
+            ibnodil2010@gmail.com
           </a>
         </div>
       </div>

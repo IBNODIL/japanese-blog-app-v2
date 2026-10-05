@@ -27,7 +27,7 @@ const eslintConfig = defineConfig([
     // Standalone Node/CommonJS utility scripts (custom server, one-off CLI
     // helpers) — not part of the Next.js app bundle, so the TS-project
     // "no require imports" rule doesn't apply here.
-    files: ["server.js", "get-reset-code.js"],
+    files: ["server.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },
